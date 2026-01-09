@@ -7,35 +7,21 @@ import RegisterPage from '@/pages/RegisterPage';
 import HomePage from '@/pages/HomePage';
 import SchedulePage from '@/pages/SchedulePage';
 import ProfilePage from '@/pages/ProfilePage';
+import { User } from '@/config/api';
 
 type Page = 'login' | 'register' | 'home' | 'schedule' | 'profile';
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState<Page>('login');
-  const [user, setUser] = useState<{
-    firstName: string;
-    lastName: string;
-    phone: string;
-    email: string;
-  } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
-  const handleLogin = (email: string) => {
-    setUser({
-      firstName: 'Иван',
-      lastName: 'Иванов',
-      phone: '+7 (999) 123-45-67',
-      email,
-    });
+  const handleLogin = (userData: User) => {
+    setUser(userData);
     setCurrentPage('home');
   };
 
-  const handleRegister = (data: {
-    firstName: string;
-    lastName: string;
-    phone: string;
-    email: string;
-  }) => {
-    setUser(data);
+  const handleRegister = (userData: User) => {
+    setUser(userData);
     setCurrentPage('home');
   };
 
@@ -67,6 +53,7 @@ const App = () => {
         )}
         {currentPage === 'schedule' && user && (
           <SchedulePage
+            userId={user.id}
             onNavigate={setCurrentPage}
           />
         )}

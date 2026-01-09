@@ -1,0 +1,17 @@
+{
+  "tests": [
+    {
+      "name": "Get upcoming sessions",
+      "method": "GET",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Get user bookings",
+      "method": "GET",
+      "queryStringParameters": {
+        "userId": "1"
+      },
+      "expectedStatus": 200
+    }
+  ]
+}

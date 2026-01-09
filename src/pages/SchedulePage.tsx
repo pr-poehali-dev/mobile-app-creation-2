@@ -1,56 +1,102 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import BottomNav from '@/components/BottomNav';
 import { useToast } from '@/hooks/use-toast';
+import { bookingsAPI, Session } from '@/config/api';
 
 interface SchedulePageProps {
+  userId?: number;
   onNavigate: (page: 'home' | 'schedule' | 'profile') => void;
 }
 
-const dates = [
-  { date: '10 янв', day: 'ПН', fullDate: '10 янв 2026' },
-  { date: '11 янв', day: 'ВТ', fullDate: '11 янв 2026' },
-  { date: '12 янв', day: 'СР', fullDate: '12 янв 2026' },
-  { date: '13 янв', day: 'ЧТ', fullDate: '13 янв 2026' },
-  { date: '14 янв', day: 'ПТ', fullDate: '14 янв 2026' },
-  { date: '15 янв', day: 'СБ', fullDate: '15 янв 2026' },
-  { date: '16 янв', day: 'ВС', fullDate: '16 янв 2026' },
-];
+function generateDates() {
+  const dates = [];
+  const today = new Date();
+  const days = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'];
+  const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    dates.push({
+      date: `${date.getDate()} ${months[date.getMonth()]}`,
+      day: days[date.getDay()],
+      fullDate: date.toISOString().split('T')[0],
+    });
+  }
+  return dates;
+}
 
-const sessionsData = {
-  '10 янв 2026': [
-    { id: 1, time: '08:00 - 09:00', trainer: 'Петров А.И.', available: 45 },
-    { id: 2, time: '09:00 - 10:00', trainer: 'Сидорова М.В.', available: 38 },
-    { id: 3, time: '17:00 - 18:00', trainer: 'Иванов С.П.', available: 12 },
-    { id: 4, time: '18:00 - 19:00', trainer: 'Петров А.И.', available: 5 },
-  ],
-  '11 янв 2026': [
-    { id: 5, time: '08:00 - 09:00', trainer: 'Сидорова М.В.', available: 50 },
-    { id: 6, time: '17:00 - 18:00', trainer: 'Петров А.И.', available: 23 },
-    { id: 7, time: '18:00 - 19:00', trainer: 'Иванов С.П.', available: 8 },
-  ],
-  '12 янв 2026': [
-    { id: 8, time: '08:00 - 09:00', trainer: 'Петров А.И.', available: 42 },
-    { id: 9, time: '17:00 - 18:00', trainer: 'Сидорова М.В.', available: 30 },
-    { id: 10, time: '18:00 - 19:00', trainer: 'Петров А.И.', available: 0 },
-  ],
-};
-
-export default function SchedulePage({ onNavigate }: SchedulePageProps) {
+export default function SchedulePage({ userId, onNavigate }: SchedulePageProps) {
+  const dates = generateDates();
   const [selectedDate, setSelectedDate] = useState(dates[0].fullDate);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleBooking = (time: string) => {
-    toast({
-      title: 'Успешно записано!',
-      description: `Вы записаны на сеанс ${time} ${selectedDate}`,
-    });
+  useEffect(() => {
+    loadSessions();
+  }, [selectedDate]);
+
+  const loadSessions = async () => {
+    setLoading(true);
+    try {
+      const result = await bookingsAPI.getSessions(selectedDate);
+      if (result.sessions) {
+        setSessions(result.sessions);
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить расписание',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const sessions = sessionsData[selectedDate as keyof typeof sessionsData] || [];
+  const handleBooking = async (sessionId: number) => {
+    if (!userId) {
+      toast({
+        title: 'Ошибка',
+        description: 'Необходимо войти в систему',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const result = await bookingsAPI.bookSession(userId, sessionId);
+      
+      if (result.error) {
+        toast({
+          title: 'Ошибка бронирования',
+          description: result.error === 'No available slots' ? 'Нет свободных мест' : 
+                      result.error === 'Already booked' ? 'Вы уже записаны на этот сеанс' : result.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (result.success) {
+        toast({
+          title: 'Успешно записано!',
+          description: 'Вы успешно записались на сеанс',
+        });
+        loadSessions();
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось записаться на сеанс',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen pb-20 bg-gradient-to-b from-white to-gray-50">
@@ -89,7 +135,11 @@ export default function SchedulePage({ onNavigate }: SchedulePageProps) {
             Доступные сеансы
           </h2>
 
-          {sessions.length === 0 ? (
+          {loading ? (
+            <Card className="p-8 text-center">
+              <p className="text-gray-600">Загрузка...</p>
+            </Card>
+          ) : sessions.length === 0 ? (
             <Card className="p-8 text-center">
               <Icon name="CalendarX" size={48} className="mx-auto text-gray-300 mb-3" />
               <p className="text-gray-600">Нет доступных сеансов на эту дату</p>
@@ -99,38 +149,41 @@ export default function SchedulePage({ onNavigate }: SchedulePageProps) {
               <Card
                 key={session.id}
                 className={`p-4 ${
-                  session.available === 0 ? 'opacity-60 bg-gray-50' : 'hover:shadow-md'
+                  session.available_slots === 0 ? 'opacity-60 bg-gray-50' : 'hover:shadow-md'
                 } transition-all`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <p className="font-semibold text-gray-900">{session.time}</p>
+                      <p className="font-semibold text-gray-900">{session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}</p>
                       <Badge
                         variant={
-                          session.available === 0
+                          session.available_slots === 0
                             ? 'destructive'
-                            : session.available < 10
+                            : session.available_slots < 5
                             ? 'secondary'
                             : 'default'
                         }
                       >
-                        {session.available === 0
+                        {session.available_slots === 0
                           ? 'Нет мест'
-                          : `${session.available} мест`}
+                          : `${session.available_slots} мест`}
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600 flex items-center gap-1">
                       <Icon name="User" size={14} />
-                      Тренер: {session.trainer}
+                      Тренер: {session.trainer_name}
                     </p>
+                    {session.specialization && (
+                      <p className="text-xs text-gray-500 mt-1">{session.specialization}</p>
+                    )}
                   </div>
                   <Button
-                    onClick={() => handleBooking(session.time)}
-                    disabled={session.available === 0}
+                    onClick={() => handleBooking(session.id)}
+                    disabled={session.available_slots === 0 || !userId}
                     size="sm"
                   >
-                    {session.available === 0 ? 'Занято' : 'Записаться'}
+                    {session.available_slots === 0 ? 'Занято' : 'Записаться'}
                   </Button>
                 </div>
               </Card>

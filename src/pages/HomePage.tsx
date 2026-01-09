@@ -1,17 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import QRCode from '@/components/QRCode';
 import BottomNav from '@/components/BottomNav';
+import { useToast } from '@/hooks/use-toast';
+import { bookingsAPI, Booking, User } from '@/config/api';
 
 interface HomePageProps {
-  user: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
+  user: User;
   onNavigate: (page: 'home' | 'schedule' | 'profile') => void;
 }
 
@@ -47,23 +45,62 @@ const specialOffers = [
   },
 ];
 
-const userSessions = [
-  {
-    id: 1,
-    date: '12 янв 2026',
-    time: '18:00 - 19:00',
-    trainer: 'Петров А.И.',
-  },
-  {
-    id: 2,
-    date: '14 янв 2026',
-    time: '17:00 - 18:00',
-    trainer: 'Сидорова М.В.',
-  },
-];
-
 export default function HomePage({ user, onNavigate }: HomePageProps) {
   const [showSessions, setShowSessions] = useState(false);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (user?.id) {
+      loadBookings();
+    }
+  }, [user]);
+
+  const loadBookings = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      const result = await bookingsAPI.getUserBookings(user.id);
+      if (result.bookings) {
+        setBookings(result.bookings.filter((b: Booking) => b.status === 'active'));
+      }
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: number) => {
+    try {
+      const result = await bookingsAPI.cancelBooking(bookingId);
+      
+      if (result.error) {
+        toast({
+          title: 'Ошибка',
+          description: result.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (result.success) {
+        toast({
+          title: 'Запись отменена',
+          description: 'Ваша запись успешно отменена',
+        });
+        loadBookings();
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось отменить запись',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen pb-20 bg-gradient-to-b from-white to-gray-50">
@@ -78,7 +115,7 @@ export default function HomePage({ user, onNavigate }: HomePageProps) {
           </button>
         </div>
         <p className="text-white/90">
-          Добро пожаловать, {user.firstName}!
+          Добро пожаловать, {user.first_name}!
         </p>
       </div>
 
@@ -143,20 +180,56 @@ export default function HomePage({ user, onNavigate }: HomePageProps) {
 
           {showSessions && (
             <div className="space-y-3 animate-fade-in">
-              {userSessions.map((session) => (
-                <Card key={session.id} className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="font-semibold text-gray-900">{session.date}</p>
-                      <p className="text-sm text-gray-600">{session.time}</p>
-                      <p className="text-sm text-gray-500">Тренер: {session.trainer}</p>
-                    </div>
-                    <Button variant="destructive" size="sm">
-                      Отменить
-                    </Button>
-                  </div>
+              {loading ? (
+                <Card className="p-8 text-center">
+                  <p className="text-gray-600">Загрузка...</p>
                 </Card>
-              ))}
+              ) : bookings.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <Icon name="Calendar" size={48} className="mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-600">У вас пока нет записей</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => onNavigate('schedule')}
+                  >
+                    Перейти к расписанию
+                  </Button>
+                </Card>
+              ) : (
+                bookings.map((booking) => (
+                  <Card key={booking.id} className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {new Date(booking.session_date).toLocaleDateString('ru-RU', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Тренер: {booking.trainer_name}
+                        </p>
+                        {booking.specialization && (
+                          <p className="text-xs text-gray-400">{booking.specialization}</p>
+                        )}
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleCancelBooking(booking.id)}
+                      >
+                        Отменить
+                      </Button>
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
           )}
         </section>

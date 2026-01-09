@@ -3,19 +3,52 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { authAPI, User } from '@/config/api';
 
 interface LoginPageProps {
-  onLogin: (email: string) => void;
+  onLogin: (user: User) => void;
   onNavigateToRegister: () => void;
 }
 
 export default function LoginPage({ onLogin, onNavigateToRegister }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email);
+    setLoading(true);
+
+    try {
+      const result = await authAPI.login(email, password);
+
+      if (result.error) {
+        toast({
+          title: 'Ошибка входа',
+          description: result.error === 'Invalid credentials' ? 'Неверный email или пароль' : result.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (result.success && result.user) {
+        toast({
+          title: 'Успешный вход',
+          description: `Добро пожаловать, ${result.user.first_name}!`,
+        });
+        onLogin(result.user);
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось подключиться к серверу',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,8 +91,8 @@ export default function LoginPage({ onLogin, onNavigateToRegister }: LoginPagePr
             />
           </div>
 
-          <Button type="submit" className="w-full" size="lg">
-            Войти
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            {loading ? 'Вход...' : 'Войти'}
           </Button>
         </form>
 

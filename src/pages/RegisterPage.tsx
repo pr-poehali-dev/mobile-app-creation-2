@@ -3,14 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { authAPI, User } from '@/config/api';
 
 interface RegisterPageProps {
-  onRegister: (data: {
-    firstName: string;
-    lastName: string;
-    phone: string;
-    email: string;
-  }) => void;
+  onRegister: (user: User) => void;
   onNavigateToLogin: () => void;
 }
 
@@ -22,10 +19,41 @@ export default function RegisterPage({ onRegister, onNavigateToLogin }: Register
     email: '',
     password: '',
   });
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onRegister(formData);
+    setLoading(true);
+
+    try {
+      const result = await authAPI.register(formData);
+
+      if (result.error) {
+        toast({
+          title: 'Ошибка регистрации',
+          description: result.error === 'Email already registered' ? 'Email уже зарегистрирован' : result.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (result.success && result.user) {
+        toast({
+          title: 'Успешная регистрация',
+          description: 'Ваш аккаунт создан!',
+        });
+        onRegister(result.user);
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось подключиться к серверу',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -106,8 +134,8 @@ export default function RegisterPage({ onRegister, onNavigateToLogin }: Register
             />
           </div>
 
-          <Button type="submit" className="w-full" size="lg">
-            Зарегистрироваться
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            {loading ? 'Регистрация...' : 'Зарегистрироваться'}
           </Button>
         </form>
 

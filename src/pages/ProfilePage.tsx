@@ -3,14 +3,10 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import QRCode from '@/components/QRCode';
 import BottomNav from '@/components/BottomNav';
+import { User } from '@/config/api';
 
 interface ProfilePageProps {
-  user: {
-    firstName: string;
-    lastName: string;
-    phone: string;
-    email: string;
-  };
+  user: User;
   onNavigate: (page: 'home' | 'schedule' | 'profile') => void;
   onLogout: () => void;
 }
@@ -39,7 +35,7 @@ export default function ProfilePage({ user, onNavigate, onLogout }: ProfilePageP
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">
-                {user.lastName} {user.firstName}
+                {user.last_name} {user.first_name}
               </h2>
               <p className="text-sm text-gray-600">Студент ТОГУ</p>
             </div>
