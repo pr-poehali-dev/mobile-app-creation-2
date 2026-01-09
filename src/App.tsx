@@ -1,28 +1,87 @@
+import { useState } from 'react';
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import LoginPage from '@/pages/LoginPage';
+import RegisterPage from '@/pages/RegisterPage';
+import HomePage from '@/pages/HomePage';
+import SchedulePage from '@/pages/SchedulePage';
+import ProfilePage from '@/pages/ProfilePage';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+type Page = 'login' | 'register' | 'home' | 'schedule' | 'profile';
 
-const queryClient = new QueryClient();
+const App = () => {
+  const [currentPage, setCurrentPage] = useState<Page>('login');
+  const [user, setUser] = useState<{
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+  } | null>(null);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+  const handleLogin = (email: string) => {
+    setUser({
+      firstName: 'Иван',
+      lastName: 'Иванов',
+      phone: '+7 (999) 123-45-67',
+      email,
+    });
+    setCurrentPage('home');
+  };
+
+  const handleRegister = (data: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+  }) => {
+    setUser(data);
+    setCurrentPage('home');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setCurrentPage('login');
+  };
+
+  return (
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <div className="min-h-screen bg-white">
+        {currentPage === 'login' && (
+          <LoginPage
+            onLogin={handleLogin}
+            onNavigateToRegister={() => setCurrentPage('register')}
+          />
+        )}
+        {currentPage === 'register' && (
+          <RegisterPage
+            onRegister={handleRegister}
+            onNavigateToLogin={() => setCurrentPage('login')}
+          />
+        )}
+        {currentPage === 'home' && user && (
+          <HomePage
+            user={user}
+            onNavigate={setCurrentPage}
+          />
+        )}
+        {currentPage === 'schedule' && user && (
+          <SchedulePage
+            onNavigate={setCurrentPage}
+          />
+        )}
+        {currentPage === 'profile' && user && (
+          <ProfilePage
+            user={user}
+            onNavigate={setCurrentPage}
+            onLogout={handleLogout}
+          />
+        )}
+        <Toaster />
+        <Sonner />
+      </div>
     </TooltipProvider>
-  </QueryClientProvider>
-);
+  );
+};
 
 export default App;
