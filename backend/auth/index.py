@@ -7,7 +7,7 @@ from psycopg2.extras import RealDictCursor
 
 def get_db_connection():
     """Создание подключения к базе данных"""
-    db_url = os.environ.get('SUPABASE_DB_URL') or os.environ.get('DATABASE_URL')
+    db_url = os.environ.get('SUPABASE_CONNECTION') or os.environ.get('SUPABASE_DB_URL') or os.environ.get('DATABASE_URL')
     return psycopg2.connect(db_url)
 
 def hash_password(password: str) -> str:
@@ -58,8 +58,6 @@ def handler(event: dict, context) -> dict:
         }
 
 def register_user(data: dict) -> dict:
-    import sys
-    print(f"DEBUG: Using DB URL from env: {os.environ.get('SUPABASE_DB_URL', 'NOT SET')[:50]}...", file=sys.stderr)
     """Регистрация нового пользователя"""
     email = data.get('email')
     password = data.get('password')
