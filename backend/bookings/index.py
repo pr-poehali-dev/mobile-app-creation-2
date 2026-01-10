@@ -7,8 +7,7 @@ from datetime import datetime, timedelta
 
 def get_db_connection():
     """Создание подключения к базе данных"""
-    db_url = os.environ.get('SUPABASE_TX') or os.environ.get('DATABASE_URL')
-    return psycopg2.connect(db_url)
+    return psycopg2.connect(os.environ['DATABASE_URL'])
 
 def handler(event: dict, context) -> dict:
     """Обработчик запросов бронирования"""
