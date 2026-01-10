@@ -7,7 +7,8 @@ from psycopg2.extras import RealDictCursor
 
 def get_db_connection():
     """Создание подключения к базе данных"""
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    db_url = os.environ.get('SUPABASE_DATABASE_URL') or os.environ.get('DATABASE_URL')
+    return psycopg2.connect(db_url)
 
 def hash_password(password: str) -> str:
     """Хеширование пароля"""
