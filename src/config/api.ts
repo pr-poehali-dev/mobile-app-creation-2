@@ -62,15 +62,23 @@ export const authAPI = {
 
 export const bookingsAPI = {
   getSessions: async (date?: string) => {
+    const timestamp = Date.now();
     const url = date
-      ? `${API_URLS.bookings}?date=${date}`
-      : API_URLS.bookings;
-    const response = await fetch(url);
+      ? `${API_URLS.bookings}?date=${date}&_t=${timestamp}`
+      : `${API_URLS.bookings}?_t=${timestamp}`;
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     return response.json();
   },
 
   getUserBookings: async (userId: number) => {
-    const response = await fetch(`${API_URLS.bookings}?userId=${userId}`);
+    const timestamp = Date.now();
+    const response = await fetch(`${API_URLS.bookings}?userId=${userId}&_t=${timestamp}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     return response.json();
   },
 
