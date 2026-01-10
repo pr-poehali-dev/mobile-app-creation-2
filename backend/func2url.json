@@ -1,5 +1,4 @@
 {
-  "test-connection": "https://functions.poehali.dev/6e07d5df-a84a-4bd9-a38e-8f0613d453f0",
   "auth": "https://functions.poehali.dev/8b581e64-770d-4733-8dde-1c8e15721ca3",
   "bookings": "https://functions.poehali.dev/e1d40269-67c7-460a-9838-394d23af5658"
 }
