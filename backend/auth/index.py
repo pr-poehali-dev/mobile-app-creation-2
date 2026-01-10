@@ -58,6 +58,8 @@ def handler(event: dict, context) -> dict:
         }
 
 def register_user(data: dict) -> dict:
+    import sys
+    print(f"DEBUG: Using DB URL from env: {os.environ.get('SUPABASE_DB_URL', 'NOT SET')[:50]}...", file=sys.stderr)
     """Регистрация нового пользователя"""
     email = data.get('email')
     password = data.get('password')
